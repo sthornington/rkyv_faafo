@@ -37,7 +37,7 @@ where
         })
     }
 
-    pub unsafe fn unchecked(&self) -> &T::Archived {
+    pub fn unchecked(&self) -> &T::Archived {
         unsafe { rkyv::access_unchecked::<T::Archived>(&self.mmap) }
     }
 }
@@ -51,15 +51,17 @@ where
 {
     type Target = T::Archived;
     fn deref(&self) -> &Self::Target {
-        unsafe { self.unchecked() }
+        self.unchecked()
     }
 }
 
-impl<T, E> fmt::Debug for MmapBox<T, E> where    T: Archive,
-    T::Archived: Portable + for<'a> CheckBytes<HighValidator<'a, rancor::Error>>,
+impl<T, E> fmt::Debug for MmapBox<T, E>
+where
+    T: Archive,
+    T::Archived: Portable + for<'a> CheckBytes<HighValidator<'a, rancor::Error>> + std::fmt::Debug,
     E: From<io::Error> + Display + From<rancor::Error>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", &self)
+        write!(f, "{:?}", self.unchecked())
     }
 }

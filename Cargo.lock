@@ -188,6 +188,7 @@ dependencies = [
  "bytecheck",
  "memmap2",
  "rkyv",
+ "uuid",
 ]
 
 [[package]]
