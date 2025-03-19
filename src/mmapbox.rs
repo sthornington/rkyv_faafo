@@ -29,7 +29,7 @@ where
     pub fn new(path: &Path) -> Result<Self, E> {
         let file = File::open(path)?;
         let mmap = unsafe { MmapOptions::new().map(&file)? };
-        let _ = rkyv::access::<T::Archived, rancor::Error>(&mmap)?;
+        //et _ = rkyv::access::<T::Archived, rancor::Error>(&mmap)?;
         Ok(MmapBox {
             mmap,
             phantom: PhantomData,

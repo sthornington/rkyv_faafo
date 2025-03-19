@@ -1,9 +1,11 @@
 mod cache;
 mod mmapbox;
 mod wuuid;
-
 use std::collections::BTreeMap;
+use std::hint::black_box;
 use std::path::PathBuf;
+use std::time::Instant;
+use uuid;
 
 use rkyv::ser::allocator::Arena;
 use rkyv::{Archive, Deserialize, Serialize};
@@ -21,7 +23,8 @@ struct Test {
     string: String,
     option: Option<Vec<i32>>,
     map: BTreeMap<u32, String>,
-    id: wuuid,
+    #[rkyv(with = wuuid::UuidDef)]
+    id: uuid::Uuid,
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -31,20 +34,33 @@ fn main() -> Result<(), anyhow::Error> {
         string: "hello world".to_string(),
         option: Some(vec![1, 2, 3, 4]),
         map: BTreeMap::from(items),
+        id: uuid::Uuid::new_v4(),
     };
     let expected = value.clone();
     let mut arena = Arena::new();
 
     let path: PathBuf = "test.bin".into();
-    let cached = cache::get_cached::<_, _, anyhow::Error>(&path, || value, arena.acquire())?;
+    const N: usize = 1000000;
+    let mut cached: Option<_> = None;
+    let start = Instant::now();
+    for _ in 0..N {
+        cached = Some(cache::get_cached::<_, _, anyhow::Error>(
+            &path,
+            || value.clone(),
+            arena.acquire(),
+        )?);
+        black_box(cached.as_ref().unwrap());
+    }
+    let elapsed = start.elapsed();
+    println!("{:?}ns per iteration", elapsed.as_nanos() / (N as u128));
 
     println!("{:?}", &expected);
-    println!("{:?}", &cached);
+    println!("{:?}", cached.as_ref().unwrap());
     //assert_eq!(cached.unchecked(), &expected);
     for (k, v) in expected.map.iter() {
         println!("{} -> {}", k, v);
     }
-    for (k, v) in cached.map.iter() {
+    for (k, v) in cached.as_ref().unwrap().map.iter() {
         println!("{} -> {}", k, v);
     }
     Ok(())
